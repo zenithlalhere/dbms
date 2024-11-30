@@ -1,0 +1,240 @@
+create database if not exists student_society;
+
+drop database student_society;
+use student_society;
+
+
+-- create Student table
+ 
+create table student(
+roll_no char(6) primary key,
+student_name varchar(20),
+course varchar(10),
+dob varchar(40)
+);
+
+
+
+-- create society table
+
+create table society(
+socId char(6) primary key,
+socName varchar(20),
+mentor_name varchar(15),
+total_seats int unsigned 
+);
+
+-- create envirollment table
+
+create table enrollment(
+rollNo char(6),
+sid char(6),
+dateOfEnrollment varchar(40),
+foreign key (sid) references society(socId),
+foreign key (rollNo) references student(roll_no)
+
+);   
+
+
+-- Insert data into student
+insert into student
+(roll_no, student_name, course, dob)
+values
+('S001', 'Amit Kumar', 'CS', '2001-05-15'),
+('S002', 'Ravi Singh', 'CHEM', '2000-07-20'),
+('S003', 'Anjali Verma', 'CS', '2002-08-12'),
+('S004', 'Arjun Roy', 'MATH', '1999-03-22'),
+('S005', 'Zara Khan', 'CS', '2001-11-30'),
+('X009', 'Xavier Peter', 'PHY', '2000-02-15'),
+('Z009', 'Zayn Malik', 'BIO', '1999-09-09');
+
+-- Insert data into society
+insert into society
+(socID, socName, mentor_name, total_seats)
+values
+('SOC001', 'Debating', 'R. Gupta', 50),
+('SOC002', 'Dancing', 'S. Mehta', 30),
+('SOC003', 'Sashakt', 'A. Gupta', 40),
+('SOC004', 'Music', 'P. Roy', 25),
+('SOC005', 'Art Club', 'M. Gupta', 20);
+
+select*from society;
+
+-- Insert data into enrollment
+insert into enrollment
+(rollNo, sid, dateOfEnrollment)
+values
+('S001', 'SOC001', '2023-08-01'),
+('S002', 'SOC002', '2023-09-10'),
+('S001', 'SOC003', '2023-08-15'),
+('S003', 'SOC004', '2023-10-05'),
+('S004', 'SOC001', '2023-08-20'),
+('Z009', 'SOC005', '2023-07-18');
+
+
+select distinct student_name from 
+student
+inner join enrollment
+on student.roll_no = enrollment.rollNo;
+
+select socName from society;
+
+
+select student_name from
+student
+where student_name like 'A%';
+
+
+
+select * from 
+student 
+where course in('CS','CHEM');
+
+
+select student_name from
+student
+where (roll_no like 'X%' or roll_no like 'Z%')and roll_no like '%9';
+
+SET SQL_SAFE_UPDATES = 0;
+
+update society
+set  mentor_name = "PRASHANT SIR"
+where mentor_name ="A. Gupta";
+
+
+SELECT society.socName
+FROM society
+INNER JOIN enrollment ON society.socID = enrollment.sid
+GROUP BY society.socID
+HAVING COUNT(enrollment.sid) > 5;
+
+
+
+SELECT s.student_name
+FROM student s
+INNER JOIN enrollment e ON s.roll_no = e.rollNo
+INNER JOIN society soc ON e.sid = soc.socID
+WHERE soc.socName = 'NSS'
+ORDER BY s.dob DESC
+LIMIT 1;
+
+
+
+select socName from
+society s
+inner join enrollment ss
+on s.socID = ss.sid
+group by socName 
+
+limit 1;
+
+
+select socName from
+society s
+inner join enrollment ss
+on s.socID = ss.sid
+group by socName 
+
+limit 2;
+
+
+
+select student_name from
+student
+left join enrollment as e
+on student.roll_no = e.rollNo
+where e.rollNo is null
+;
+
+
+
+SELECT s.student_name
+FROM student AS s
+INNER JOIN enrollment AS e ON s.roll_no = e.rollNo
+GROUP BY s.student_name
+HAVING COUNT(s.student_name) >= 2;
+
+
+SELECT soc.socName
+FROM society AS soc
+INNER JOIN enrollment AS e ON soc.socID = e.sid
+GROUP BY soc.socName
+HAVING COUNT(e.rollNo) = (
+    SELECT MAX(student_count)
+    FROM (
+        SELECT COUNT(e.rollNo) AS student_count
+        FROM enrollment AS e
+        GROUP BY e.sid
+    ) AS subquery
+);
+
+
+
+SELECT DISTINCT s.student_name AS name
+FROM student AS s
+INNER JOIN enrollment AS e ON s.roll_no = e.rollNo
+UNION
+SELECT DISTINCT soc.socName AS name
+FROM society AS soc
+INNER JOIN enrollment AS e ON soc.socID = e.sid;
+
+
+SELECT s.socName
+FROM society AS s
+INNER JOIN enrollment AS e ON s.socID = e.sid
+GROUP BY s.socName, s.total_seats
+HAVING COUNT(e.sid) = (s.total_seats * 0.1);
+
+SELECT s.socName, 
+       (s.total_seats - COUNT(e.sid)) AS vacant_seats
+FROM society AS s
+LEFT JOIN enrollment AS e ON s.socID = e.sid
+GROUP BY s.socName, s.total_seats;
+
+
+UPDATE society
+SET total_seats = total_seats + (total_seats * 0.10);
+
+
+ALTER TABLE enrollment
+ADD COLUMN fees_paid ENUM('YES', 'NO') DEFAULT 'NO';
+
+
+
+
+CREATE VIEW society_student_count AS
+SELECT s.socName, 
+       COUNT(e.sid) AS total_students
+FROM society AS s
+LEFT JOIN enrollment AS e ON s.socID = e.sid
+GROUP BY s.socName;
+
+
+
+SELECT s.student_name
+FROM student s
+INNER JOIN enrollment e ON s.roll_no = e.rollNo
+GROUP BY s.student_name
+HAVING COUNT(DISTINCT e.sid) = (SELECT COUNT(*) FROM society);
+
+SELECT COUNT(DISTINCT e.sid) AS society_count
+FROM enrollment e
+GROUP BY e.sid
+HAVING COUNT(e.rollNo) > 5;
+
+SELECT COUNT(*) AS total_students
+FROM student
+WHERE DATEDIFF(CURDATE(), STR_TO_DATE(student.dob, '%Y-%m-%d')) / 365 > 20;
+
+SELECT 
+    s.socName AS Society_Name,
+    s.mentor_name AS Mentor_Name,
+    s.total_seats AS Total_Capacity,
+    COUNT(e.sid) AS Total_Enrolled,
+    (s.total_seats - COUNT(e.sid)) AS Unfilled_Seats
+FROM 
+    society s
+LEFT JOIN 
+    enrollment e ON s.socId = e.sid
+GROUP BY 
+    s.socId;
